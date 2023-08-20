@@ -7,25 +7,25 @@
 //
 
 import UIKit
-import QuartzCore
-
 
 protocol GaugeLine {
-    func getLineGauge(_ rotateAngle: Double) -> CAShapeLayer
+
+    func getLineGauge(_ rotationAngle: CGFloat) -> CAShapeLayer
 }
 
-extension Gauge: GaugeLine {
-    func getLineGauge(_ rotateAngle: Double) -> CAShapeLayer {
+extension GaugeView: GaugeLine {
+
+    func getLineGauge(_ rotationAngle: CGFloat) -> CAShapeLayer {
 
         let gaugeLayer = CAShapeLayer()
 
         if bgLayer == nil {
-            bgLayer = CAShapeLayer.getLine(lineWidth, strokeStart: 0, strokeEnd: 1, strokeColor: _bgStartColor, fillColor: UIColor.clear, shadowRadius: shadowRadius, shadowOpacity: shadowOpacity, shadowOffsset: CGSize.zero, bounds: bounds)
+            bgLayer = CAShapeLayer.getLine(lineWidth, strokeStart: 0, strokeEnd: 1, strokeColor: _bgStartColor, fillColor: .clear, shadowRadius: shadowRadius, shadowOpacity: shadowOpacity, shadowOffsset: .zero, bounds: bounds)
             bgLayer.frame = layer.bounds
         }
 
         if ringLayer == nil {
-            ringLayer = CAShapeLayer.getLine(lineWidth, strokeStart: 0, strokeEnd: 1, strokeColor: UIColor.clear, fillColor: UIColor.clear, shadowRadius: shadowRadius, shadowOpacity: shadowOpacity, shadowOffsset: CGSize.zero, bounds: bounds)
+            ringLayer = CAShapeLayer.getLine(lineWidth, strokeStart: 0, strokeEnd: 1, strokeColor: .clear, fillColor: .clear, shadowRadius: shadowRadius, shadowOpacity: shadowOpacity, shadowOffsset: .zero, bounds: bounds)
             ringLayer.frame = layer.bounds
         }
 

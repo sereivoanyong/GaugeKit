@@ -8,69 +8,66 @@
 
 import UIKit
 
-extension Gauge {
-    public func animateRate(_ duration: TimeInterval, newValue: CGFloat, completion: @escaping (Bool) -> ()) -> Void {
+extension GaugeView {
+
+    public func animateValue(_ duration: TimeInterval, newValue: CGFloat, completion: @escaping (Bool) -> Void) -> Void {
         animationTimer.invalidate()
         
-        let refreshRate: Double = 0.1
-        let rateSpeed: CGFloat = CGFloat(refreshRate) * ((newValue - self.rate) / CGFloat(duration))
-        
-        animationTimer = Timer.scheduledTimer(
+        let refreshRate: TimeInterval = 0.1
+        let speed = CGFloat(refreshRate) * ((newValue - value) / CGFloat(duration))
+
+        animationTimer = .scheduledTimer(
             timeInterval: refreshRate,
             target: self,
             selector: #selector(updateProgress(_:)),
-            userInfo: [newValue, rateSpeed],
+            userInfo: [newValue, speed],
             repeats: true
         )
         
         animationTimer.fire()
         
-        animationCompletionBlock = completion
+        animationCompletion = completion
     }
     
     @objc func updateProgress(_ timer: Timer) -> Void {
         let userInfo = timer.userInfo as! [CGFloat]
-        guard let newValue: CGFloat = userInfo.first else {
+        guard let newValue = userInfo.first else {
             print("GAUGE-KIT: Error, new value not defined...")
             return
         }
         
-        guard let rateSpeed: CGFloat = userInfo.last else {
+        guard let speed = userInfo.last else {
             print("GAUGE-KIT: Error, rate speed could not be defined...")
             return
         }
         
-        self.rate += rateSpeed
-        
-        if rateSpeed < 0 {
-            if self.rate <= newValue {
-                self.rate = newValue
+        value += speed
+
+        if speed < 0 {
+            if value <= newValue {
+                value = newValue
                 timer.invalidate()
-                animationCompletionBlock(true)
-                //print("GAUGE-KIT: Gauge went down to \(newValue)")
+                animationCompletion?(true)
             }
             
-            if self.rate <= 0 {
-                self.rate = 0
+            if value <= 0 {
+                value = 0
                 timer.invalidate()
-                animationCompletionBlock(true)
-                //print("GAUGE-KIT: Gauge emptied")
+                animationCompletion?(true)
             }
         }
         
-        if rateSpeed >= 0 {
-            if self.rate >= newValue {
-                self.rate = newValue
+        if speed >= 0 {
+            if value >= newValue {
+                value = newValue
                 timer.invalidate()
-                animationCompletionBlock(true)
-                //print("GAUGE-KIT: Gauge went up to \(newValue)")
+                animationCompletion?(true)
             }
             
-            if self.rate >= self.maxValue {
-                self.rate = self.maxValue
+            if value >= maxValue {
+                value = maxValue
                 timer.invalidate()
-                animationCompletionBlock(true)
-                //print("GAUGE-KIT: Gauge filled")
+                animationCompletion?(true)
             }
         }
     }

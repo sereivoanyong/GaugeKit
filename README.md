@@ -72,7 +72,7 @@ If you prefer not to use either of the aforementioned dependency managers, you c
 
 ![GaugeKit](https://raw.githubusercontent.com/skywinder/GaugeKit/master/Images/IB_class.png)
 
-- Select type of gauge (property `type` in class or `gaugeTypeInt` for changes directly in Interface builder)
+- Select type of gauge (property `type` in class or `typeRaw` for changes directly in Interface builder)
 
        - case `Circle`
        - case `Left`

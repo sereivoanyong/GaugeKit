@@ -13,7 +13,7 @@ class MainViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        gradientGauge.colorsArray = [UIColor.red, UIColor.orange, UIColor.yellow ,UIColor.green]
+        gradientGauge.colors = [UIColor.red, UIColor.orange, UIColor.yellow ,UIColor.green]
     }
 
     @IBOutlet var allGauges: [Gauge]!

@@ -7,11 +7,9 @@
 //
 
 import UIKit
-import QuartzCore
-
-let pi_2 = Double.pi / 2
 
 public enum GaugeType: Int {
+
     case circle = 0
     case left
     case right
@@ -20,8 +18,9 @@ public enum GaugeType: Int {
 }
 
 @IBDesignable
-open class Gauge: UIView {
-    @IBInspectable open var startColor: UIColor = UIColor.green {
+open class GaugeView: UIView {
+
+    @IBInspectable open var startColor: UIColor = .green {
         didSet {
             resetLayers()
             updateLayerProperties()
@@ -29,13 +28,9 @@ open class Gauge: UIView {
     }
 
     /// default is nil: endColor is same as startColor
-    @IBInspectable open var endColor: UIColor {
+    @IBInspectable open var endColor: UIColor! {
         get {
-            if let _endColor = _endColor {
-                return _endColor
-            } else {
-                return UIColor.red
-            }
+            return _endColor ?? startColor
         }
         set {
             _endColor = newValue
@@ -56,21 +51,13 @@ open class Gauge: UIView {
 
     internal var _bgStartColor: UIColor {
         get {
-            if let bgColor = bgColor {
-                return bgColor.withAlphaComponent(bgAlpha)
-            } else {
-                return startColor.withAlphaComponent(bgAlpha)
-            }
+            return (bgColor ?? startColor).withAlphaComponent(bgAlpha)
         }
     }
 
     internal var _bgEndColor: UIColor {
         get {
-            if let bgColor = bgColor {
-                return bgColor.withAlphaComponent(bgAlpha)
-            } else {
-                return endColor.withAlphaComponent(bgAlpha)
-            }
+            return (bgColor ?? endColor).withAlphaComponent(bgAlpha)
         }
     }
     @IBInspectable open var bgAlpha: CGFloat = 0.2 {
@@ -78,12 +65,12 @@ open class Gauge: UIView {
             updateLayerProperties()
         }
     }
-    @IBInspectable open var rotate: Double = 0 {
+    @IBInspectable open var rotation: CGFloat = 0 {
         didSet {
             updateLayerProperties()
         }
     }
-    @IBInspectable open var colorsArray: [UIColor] = [] {
+    @IBInspectable open var colors: [UIColor] = [] {
         didSet {
             updateLayerProperties()
         }
@@ -121,29 +108,24 @@ open class Gauge: UIView {
     }
 
     /// Convenience property to setup type variable from IB
-    @IBInspectable var gaugeTypeInt: Int {
-
+    @IBInspectable var typeRaw: Int {
         get {
             return type.rawValue
         }
-        set(newValue) {
-            if let newType = GaugeType(rawValue: newValue) {
-                type = newType
-            } else {
-                type = .circle
-            }
+        set {
+            type = GaugeType(rawValue: newValue) ?? .circle
         }
     }
 
-    /// This value specify rate value for 100% filled gauge. Default is 10.
-    ///i.e. with rate = 10 gauge is 100% filled.
+    /// This property specifies `value` for 100% filled gauge. Default is 10.
+    ///i.e. with `value` = 10 gauge is 100% filled.
     @IBInspectable open var maxValue: CGFloat = 10 {
         didSet {
             updateLayerProperties()
         }
     }
     /// percantage of filled Gauge. 0..maxValue.
-    @IBInspectable open var rate: CGFloat = 8 {
+    @IBInspectable open var value: CGFloat = 8 {
         didSet {
             updateLayerProperties()
         }
@@ -153,64 +135,59 @@ open class Gauge: UIView {
             updateLayerProperties()
         }
     }
-    @IBInspectable open var lineWidth: CGFloat = 15.0 {
+    @IBInspectable open var lineWidth: CGFloat = 15 {
         didSet {
             updateLayerProperties()
         }
     }
 
-/// Main gauge layer
+    /// Main gauge layer
     var gaugeLayer: CALayer!
-/// Colored layer, depends from scale
+    /// Colored layer, depends from scale
     var ringLayer: CAShapeLayer!
-/// background for ring layer
+    /// background for ring layer
     var bgLayer: CAShapeLayer!
-/// ring gradient layer
+    /// ring gradient layer
     var ringGradientLayer: CAGradientLayer!
-/// background gradient
+    /// background gradient
     var bgGradientLayer: CAGradientLayer!
 
     // Animation variables
     internal var animationTimer: Timer = Timer()
-    internal var animationCompletionBlock: (Bool) -> () = {_ in }
-    
-    func getGauge(_ rotateAngle: Double = 0) -> CAShapeLayer {
+    internal var animationCompletion: ((Bool) -> Void)?
+
+    func getGauge(_ rotationAngle: CGFloat) -> CAShapeLayer {
         switch type {
         case .left, .right:
-            return getHalfGauge(rotateAngle)
+            return getHalfGauge(rotationAngle)
         case .circle:
-            return getCircleGauge(rotateAngle)
+            return getCircleGauge(rotationAngle)
         case .line:
-             return getLineGauge(rotateAngle)
+             return getLineGauge(rotationAngle)
         default:
-            return getCircleGauge(rotateAngle)
+            return getCircleGauge(rotationAngle)
         }
     }
 
     func updateLayerProperties() {
-        backgroundColor = UIColor.clear
-        
-        if (ringLayer != nil) {
+        if ringLayer != nil {
             switch type {
             case .left, .right:
                 // For Half Gauge, you have to fill 50% of circle and round it wisely
-                let percentage = (rate / 2 / maxValue).truncatingRemainder(dividingBy: 0.5)
-                ringLayer.strokeEnd = (rate >= maxValue ? 0.5 : percentage + ((rate != 0 && percentage == 0) ? 0.5 : 0))
+                let percentage = (value / 2 / maxValue).truncatingRemainder(dividingBy: 0.5)
+                ringLayer.strokeEnd = value >= maxValue ? 0.5 : percentage + (value != 0 && percentage == 0 ? 0.5 : 0)
             default:
-                ringLayer.strokeEnd = rate / maxValue
+                ringLayer.strokeEnd = value / maxValue
             }
 
-            var strokeColor = UIColor.lightGray
+            if !colors.isEmpty {
+                let percentageInSector = ((value / maxValue * CGFloat(colors.count - 1) * 100).truncatingRemainder(dividingBy: 100)) / 100
+                let currentSector = Int(value / maxValue * CGFloat(colors.count - 1)) + 1
 
-            if !colorsArray.isEmpty {
+                let firstColor = colors[max(0, currentSector - 1)]
+                let secondColor = colors[min(currentSector, colors.count - 1)]
 
-                let percentageInSector: CGFloat = ((rate / maxValue * CGFloat(colorsArray.count - 1) * 100.0).truncatingRemainder(dividingBy: 100.0)) / 100.0
-                let currentSector: Int = Int(rate / maxValue * CGFloat(colorsArray.count - 1)) + 1
-
-                let firstColor = colorsArray[max(0, currentSector - 1)]
-                let secondColor = colorsArray[min(currentSector, colorsArray.count - 1)]
-
-                strokeColor = blend(colors: (firstColor, secondColor), distance: percentageInSector )
+                let strokeColor = blend(colors: (firstColor, secondColor), distance: percentageInSector)
 
                 if type == .line {
                     ringLayer.strokeColor = strokeColor.cgColor
@@ -228,9 +205,8 @@ open class Gauge: UIView {
     }
 
     private func blend(colors: (UIColor, UIColor), distance: CGFloat) -> UIColor {
-
         let (color1, color2) = colors
-        let (weight1, weight2) = (1.0 - distance, distance)
+        let (weight1, weight2) = (1 - distance, distance)
 
         var (red1, green1, blue1) : (CGFloat, CGFloat, CGFloat) = (0, 0, 0)
         var (red2, green2, blue2) : (CGFloat, CGFloat, CGFloat) = (0, 0, 0)
@@ -241,16 +217,17 @@ open class Gauge: UIView {
             .map { weight1 * $0.0 + weight2 * $0.1 }
 
         let (red, green, blue) = (blendedColorComponents[0], blendedColorComponents[1], blendedColorComponents[2])
-        return UIColor(red: red, green: green, blue: blue, alpha: 1.0)
-    }
-
-    required public init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-        updateLayerProperties()
+        return UIColor(red: red, green: green, blue: blue, alpha: 1)
     }
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
+        isOpaque = false
+        updateLayerProperties()
+    }
+
+    public required init?(coder: NSCoder) {
+        super.init(coder: coder)
         updateLayerProperties()
     }
 
@@ -260,15 +237,11 @@ open class Gauge: UIView {
     }
 
     func reverseX(_ layer: CALayer) {
-//        layer.transform = CATransform3DScale(CATransform3DMakeRotation(CGFloat(M_PI_2), 0, 0, 1), -1, 1, 1)
         layer.transform = CATransform3DScale(layer.transform, -1, 1, 1)
-
     }
 
     func reverseY(_ layer: CALayer) {
-//        layer.transform = CATransform3DScale(CATransform3DMakeRotation(CGFloat(M_PI_2), 0, 0, 1), 1, -1, 1)
         layer.transform = CATransform3DScale(layer.transform, 1, -1, 1)
-
     }
 
     func resetLayers() {
@@ -280,8 +253,10 @@ open class Gauge: UIView {
     }
 
     open override func layoutSubviews() {
+        super.layoutSubviews()
+
         resetLayers()
-        gaugeLayer = getGauge(rotate / 10 * Double.pi)
+        gaugeLayer = getGauge(rotation / 10 * .pi)
         layer.addSublayer(gaugeLayer)
         updateLayerProperties()
     }
